@@ -1,0 +1,6 @@
+plotly==4.9.0
+pandas==1.0.5
+requests==2.24.0
+numpy==1.19.1
+streamlit==0.69.2
+beautifulsoup4==4.9.3
