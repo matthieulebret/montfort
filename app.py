@@ -137,6 +137,5 @@ fig = alt.Chart(mylist).mark_circle(size=200).encode(alt.X('Surface:Q',scale=alt
       {"type": "nominal", "field": "Commune"},
       {"type": "quantitative", "field": "Surface",'format':',.2f'},
       {"type": "quantitative", "field": "Prix",'format':',.2f'},
-      {"type": "quantitative", "field": "Prix_m2",'format':'.2f'},
-      {'type': 'quantitative', 'field':'Ranking'}]).add_selection(highlight)
+      {"type": "quantitative", "field": "Prix_m2",'format':'.2f'}]).add_selection(highlight)
 st.altair_chart(fig,use_container_width=True)
