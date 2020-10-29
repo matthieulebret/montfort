@@ -5,6 +5,7 @@ import re
 
 import datetime as dt
 
+import altair as alt
 import plotly.express as px
 import plotly.graph_objs as go
 
@@ -14,10 +15,9 @@ from requests import get
 
 import streamlit as st
 
-st.beta_set_page_config('Download tool',layout='wide')
+st.beta_set_page_config('Montfort immobilier',layout='wide')
 
-
-st.title('Montfort real estate')
+st.title('''Immobilier a Montfort l'Amaury''')
 
 ## Import data
 df1 = pd.read_csv(r'78420_0000F.csv',sep=';',thousands=',')
@@ -50,46 +50,46 @@ df['prix_m2'] = df.apply(lambda x: priceperm2(x['type_local'],x['surface_reelle_
 
 df['Year']=pd.to_datetime(df['date_mutation']).dt.year
 
-showdata = st.checkbox('Show data')
-if showdata:
+with st.beta_expander('Voir les transactions realisees'):
     shortdf = df[['date_mutation','prix_m2','valeur_fonciere','type_local','surface_reelle_bati','surface_terrain','nombre_pieces_principales','nature_culture_speciale']]
     shortdf['valeur_fonciere'] = pd.to_numeric(shortdf['valeur_fonciere'])
     shortdf['surface_terrain'] = pd.to_numeric(shortdf['surface_terrain'])
     shortdf['surface_reelle_bati'] = pd.to_numeric(shortdf['surface_reelle_bati'])
     shortdf['nombre_pieces_principales'] = pd.to_numeric(shortdf['nombre_pieces_principales'])
-    st.write(shortdf.style.format({'valeur_fonciere':'{:,.2f}','surface_reelle_bati':'{:,.2f}','nombre_pieces_principales':'{:,.2f}','surface_terrain':'{:,.2f}','prix_m2':'{:,.2f}'}))
+    st.table(shortdf.style.format({'valeur_fonciere':'{:,.2f}','surface_reelle_bati':'{:,.2f}','nombre_pieces_principales':'{:,.2f}','surface_terrain':'{:,.2f}','prix_m2':'{:,.2f}'}))
 
-yearfilter = st.slider('Select years',min_value=2015,max_value=2019,value=(2015,2019),step=1)
+yearfilter = st.slider('Filtrer par periode',min_value=2015,max_value=2019,value=(2015,2019),step=1)
 
 df = df[(df['Year'] >= yearfilter[0]) & (df['Year'] <= yearfilter[1])]
 
 
 fig = px.scatter_mapbox(df,lat='latitude',lon='longitude',hover_name='adresse_nom_voie', color = 'type_local',color_continuous_scale='Inferno',hover_data={'date_mutation':True,'valeur_fonciere':':,.2f','type_local':True,'surface_reelle_bati':':,.2f','surface_terrain':':,.2f','prix_m2':':,.2f'},size='valeur_fonciere',zoom=13,size_max=20,height=600)
-fig.update_layout(mapbox_style='open-street-map',title='Real estate prices',legend=dict(orientation='h',title='Type de local'))
+fig.update_layout(mapbox_style='open-street-map',title='''Transactions realisees a Montfort l'Amaury''',legend=dict(orientation='h',title='Type de local'))
 st.plotly_chart(fig,use_container_width=True)
 
-##Sunburst charts
-
-st.header('Transactions by type')
-
-fig = px.sunburst(df,path=['type_local','nature_culture_speciale','adresse_nom_voie','id_mutation'],values='valeur_fonciere')
-st.plotly_chart(fig,use_contained_width=True)
 
 ## Distplot
 
-st.header('Distribution of transactions')
+col1,col2 = st.beta_columns(2)
 
-selectassets = st.multiselect('Select type_local',['Maison','None','Local industriel. commercial ou assimilé'],default=['Maison','None','Local industriel. commercial ou assimilé'])
-df = df[df['type_local'].isin(selectassets)]
+with col1:
+    ##Sunburst charts
+    st.subheader('Transactions par type')
+    st.markdown('Cliquez sur le graphe pour obtenir plus de detail.')
+    fig = px.sunburst(df,path=['type_local','nature_culture_speciale','adresse_nom_voie','id_mutation'],values='valeur_fonciere')
+    st.plotly_chart(fig)
 
-fig = px.box(df,x='Year',y='valeur_fonciere',hover_data={'date_mutation':True,'adresse_nom_voie':True,'valeur_fonciere':':,.2f','type_local':True,'surface_reelle_bati':':,.2f','surface_terrain':':,.2f','prix_m2':':,.2f'},color='Year',points='all')
-fig.update_layout(showlegend=False)
-st.plotly_chart(fig,use_contained_width=True)
-
+with col2:
+    st.subheader('Distribution des transactions')
+    selectassets = st.multiselect('Select type_local',['Maison','None','Local industriel. commercial ou assimilé'],default=['Maison','None','Local industriel. commercial ou assimilé'])
+    df = df[df['type_local'].isin(selectassets)]
+    fig = px.box(df,x='Year',y='valeur_fonciere',hover_data={'date_mutation':True,'adresse_nom_voie':True,'valeur_fonciere':':,.2f','type_local':True,'surface_reelle_bati':':,.2f','surface_terrain':':,.2f','prix_m2':':,.2f'},color='Year',points='all')
+    fig.update_layout(showlegend=False)
+    st.plotly_chart(fig)
 
 ### WEB SCRAPING
 
-st.header('Latest ads')
+st.header('Dernieres annonces')
 
 location = []
 postcode = []
@@ -103,7 +103,7 @@ soup = BeautifulSoup(page.text,'html.parser')
 mytext = soup.text
 
 
-mylist = re.findall('^.*[7][8][0-9]{3} Terrain de.*',mytext,re.MULTILINE)
+mylist = re.findall('^.*[7][8][4][0-9]{2} Terrain de.*',mytext,re.MULTILINE)
 
 for ad in mylist:
     location.append(ad.split(' ',1)[0])
@@ -128,4 +128,15 @@ mylist.drop_duplicates(keep='first',inplace=True)
 
 mylist_format = mylist.style.format({'Surface':'{:,.2f}','Prix':'{:,.2f}','Prix_m2':'{:,.2f}'})
 
-st.table(mylist_format)
+with st.beta_expander('Voir les dernieres annonces'):
+    st.table(mylist_format)
+
+highlight = alt.selection(type='interval',bind='scales',encodings=['x','y'])
+
+fig = alt.Chart(mylist).mark_circle(size=200).encode(alt.X('Surface:Q',scale=alt.Scale(domain=[0,2000])),alt.Y('Prix_m2:Q'),color='Commune:N',tooltip=[
+      {"type": "nominal", "field": "Commune"},
+      {"type": "quantitative", "field": "Surface",'format':',.2f'},
+      {"type": "quantitative", "field": "Prix",'format':',.2f'},
+      {"type": "quantitative", "field": "Prix_m2",'format':'.2f'},
+      {'type': 'quantitative', 'field':'Ranking'}]).add_selection(highlight)
+st.altair_chart(fig,use_container_width=True)
